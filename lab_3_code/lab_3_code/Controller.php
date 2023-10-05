@@ -6,11 +6,13 @@ class YahtzeeController {
     private Yahtzee $model;
     private YahtzeeView $view;
     
+  
+    
     public function __construct(Yahtzee $model, YahtzeeView $view){
         $this->model = $model;
         $this->view = $view;
     }
-    
+    //d
     public function get_model() : Yahtzee {
         /*
         get_model() : YahtzeeModel
@@ -18,7 +20,7 @@ class YahtzeeController {
         */
         return $this->model;       
     }
-    
+    //d
     public function get_view() : YahtzeeView {
         /*
         get_view() : YahtzeeView
@@ -26,7 +28,7 @@ class YahtzeeController {
         */
         return $this->view;
     }
-    
+    // done
     public function get_possible_categories() : array {
         /*
         get_possible_categories() : array
@@ -36,10 +38,16 @@ class YahtzeeController {
           user chose that category, based on the model's "kept_dice".
         */
         $rv = array();
-        
+        $rv = $this->model->get_scorecard();
+        foreach($rv as $key=>$value){
+          if(is_null($rv[$key]) == false){
+            unset($rv[$key]);
+          }
+        }
+        // echo(print_r($rv, true));
         return $rv;
     }
-    
+    //not done
     public function process_score_input(string $line) : int {
         /*
         process_score_input(string: $line) : int
@@ -53,7 +61,37 @@ class YahtzeeController {
           > Return -2, indicating an error occurred
         > If a valid category is given, it should update that category to the
           score calculated from the model's kept_dice attribute.
-        */
+        */ 
+    
+        //how to stub model's kept_dice attribute
+        // 
+
+        $scorecardValues = $this->model->get_scorecard(); 
+        $dice = $this->model->get_kept_dice();
+        // echo(print_r($this->model->get_scorecard(), true));
+        // echo("$line\n");
+        if($line == "q" || $line == "exit"){
+          return -1;
+        }
+        if(array_key_exists($line, $scorecardValues)){
+          //  $this->model->roll(5);
+         
+          // echo(strval(array_sum($dice)));
+          $this->model->update_scorecard($line, array_sum($dice));
+          // echo(print_r($this->get_model()->get_scorecard(), true));
+          // echo($line);
+        }
+        else{
+          foreach($scorecardValues as $key=>$value){
+            if(is_null($scorecardValues[$key])){
+              $this->model->update_scorecard($key, array_sum($dice));
+              break;
+            }
+          
+          }
+          // echo(print_r($this->model->get_scorecard(), true));
+          return -2;
+        }
         
         return 0;
     }
@@ -72,6 +110,26 @@ class YahtzeeController {
             (output the error message with the view).
         */
         
+        if($line == "exit" || $line == "q"){
+            return -1;
+        }
+        if($line == "" || $line == "none" || $line == "pass"){
+            return -2;
+        }
+        if($line == "all"){
+           $this->model->combine_dice();
+           return 0;
+        }
+        try{
+          $result =  $this->model->keep_by_index($line);
+        }
+        catch(Exception $result){
+          $this->view->output(strval($result));
+          return -2;
+         }
+          return $result;
+      
+       
     }
     
     public function handle_roll() : int {
@@ -82,10 +140,7 @@ class YahtzeeController {
         - Enter a loop that runs twice, and set a variable to track
           $remaining_dice to 5.
         - Each loop:
-          - Roll dice, the amount being whats in $remaining_dice. (Use the view
-            to output the last roll, and current kept dice.)
-          - (Use the view to get user input, prompting them what they want to
-            keep.)
+          - Roll dice, the amount being whats in $remaining_dice. 
           - Take the user input, feed it into process_keep_input()
             > If the return value is -2, nothing happens, continue the loop.
             > If the return value is -1, return -1.
@@ -102,6 +157,31 @@ class YahtzeeController {
         correct.  You'll want to stub the view to return pre-scripted
         responses, a good way to do this is a stub's onConsecutiveCalls method.
         */
+      $remaining_dice = 5;
+     
+      for($i = 0; $i < 2; $i++){
+       
+        $this->model->roll($remaining_dice);
+        $inputValue = $this->get_view()->get_user_input("test");
+      //  echo(strval($remaining_dice));
+        $result = $this->process_keep_input($inputValue);
+        if($result == -2){}
+        elseif($result == -1){
+          return -1;
+        }
+        else{
+          $remaining_dice = $result;
+        }
+        if($remaining_dice == 0){
+          break;
+        }
+      }
+      $diceNum = array_sum($this->model->get_kept_dice());
+      if($diceNum < 5){
+        $this->model->roll($diceNum);
+        $this->model->combine_dice();
+      }
+
         
         return 0;
     }
@@ -128,6 +208,25 @@ class YahtzeeController {
         pre-scripted inputs.  Remember, we primarily want to test data and
         behavior, NOT implementation details.
         */
+
+        for($i = 0; $i < 13; $i++){
+          $this->view->output_turn();
+          $rollValue = $this->handle_roll();
+          $this->view->output_kept_dice();
+          if($rollValue == -1){
+            return -1;
+          }
+          $availableCategories = $this->get_possible_categories();
+          $this->view->output_array($availableCategories);
+          $userInput = $this->get_view()->get_user_input("test");
+          $keptInputValue = $this->process_keep_input("$userInput");
+          if($keptInputValue == -1){
+            return -1;
+          }
+          $this->view->output_score();
+          $this->model->clear_kept_dice();
+          $this->model->increment_turn();
+        }
         
         
         return 0;
@@ -135,5 +234,5 @@ class YahtzeeController {
     }
 }
 
-/*Comment Added To Test Github*/
+/*comment Added For Github Test*/
 ?>
